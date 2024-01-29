@@ -159,7 +159,7 @@ public:
         return dynamic_cast<VerilatedVpioConst*>(reinterpret_cast<VerilatedVpio*>(h));
     }
     uint32_t type() const override { return vpiConstant; }
-    uint32_t constType() const override { return vpiDecConst; }
+    uint32_t constType() const override { return vpiIntConst; }
     int32_t num() const { return m_num; }
 };
 
@@ -210,7 +210,7 @@ public:
         switch (m_varp->vltype()) {
         case VLVT_UINT8:
         case VLVT_UINT16:
-        case VLVT_UINT32:
+        case VLVT_UINT32: return vpiIntConst;
         case VLVT_UINT64:
         case VLVT_WDATA: return vpiDecConst;
         case VLVT_STRING: return vpiStringConst;
@@ -286,7 +286,7 @@ public:
     static VerilatedVpioScope* castp(vpiHandle h) {
         return dynamic_cast<VerilatedVpioScope*>(reinterpret_cast<VerilatedVpio*>(h));
     }
-    uint32_t type() const override { return vpiScope; }
+    uint32_t type() const override { return vpiGenScope; }
     const VerilatedScope* scopep() const { return m_scopep; }
     const char* name() const override { return m_scopep->name(); }
     const char* fullname() const override { return m_scopep->name(); }
