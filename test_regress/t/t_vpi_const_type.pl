@@ -22,7 +22,8 @@ compile(
 
 execute(
     use_libvpi => 1,
-    check_finished => 1
+    check_finished => 1,
+    expect_filename => $Self->{golden_filename}
     );
 
 ok(1);

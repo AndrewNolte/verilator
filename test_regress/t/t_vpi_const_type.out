@@ -1,0 +1,22 @@
+Checking 't.byteParam'
+vpiConstType (str) = 'vpiIntConst'
+vpiConstType = 7
+Checking 't.intParam'
+vpiConstType (str) = 'vpiIntConst'
+vpiConstType = 7
+Checking 't.longParam'
+vpiConstType (str) = 'vpiDecConst'
+vpiConstType = 1
+Checking 't.realParam'
+vpiConstType (str) = 'vpiRealConst'
+vpiConstType = 2
+Checking 't.strParam'
+vpiConstType (str) = 'vpiStringConst'
+vpiConstType = 6
+Checking 't.timeParam'
+vpiConstType (str) = 'vpiDecConst'
+vpiConstType = 1
+Checking 't.signal'
+vpiConstType (str) = '*undefined*'
+vpiConstType = -1
+*-* All Finished *-*

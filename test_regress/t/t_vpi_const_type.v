@@ -11,7 +11,9 @@ import "DPI-C" context function int mon_check();
 module t (/*AUTOARG*/
    ); /*verilator public_module*/
 
+   parameter logic[7:0] byteParam /*verilator public_flat_rd*/ = '1;
    parameter int intParam /*verilator public_flat_rd*/ = 5;
+   parameter longint longParam /*verilator public_flat_rd*/ = 10;
    parameter real realParam /*verilator public_flat_rd*/ = 2.3;
    parameter time timeParam /*verilator public_flat_rd*/ = 0;
    parameter string strParam /*verilator public_flat_rd*/ = "abc";
