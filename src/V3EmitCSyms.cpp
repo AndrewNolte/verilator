@@ -185,6 +185,7 @@ class EmitCSyms final : EmitCBaseVisitorConst {
     }
 
     void varHierarchyScopes(string scp) {
+        string::size_type dotpos = scp.rfind('.');
         while (!scp.empty()) {
             const auto scpit = m_vpiScopeCandidates.find(scopeSymString(scp));
             if ((scpit != m_vpiScopeCandidates.end())
@@ -194,9 +195,10 @@ class EmitCSyms final : EmitCBaseVisitorConst {
                 if (!pair.second) pair.first->second.m_type = scpit->second.m_type;
             }
             string::size_type pos = scp.rfind("__DOT__");
-            if (pos == string::npos) {
-                pos = scp.rfind('.');
+            if (pos == string::npos || pos < dotpos) {
+                pos = dotpos;
                 if (pos == string::npos) break;
+                dotpos = scp.rfind('.', pos - 1);
             }
             scp.resize(pos);
         }
