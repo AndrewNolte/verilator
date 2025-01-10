@@ -142,6 +142,57 @@ void VlcTop::writeInfo(const string& filename) {
     }
 }
 
+void VlcTop::writeCsv(const string& filename) {
+    UINFO(2, "writeCsv " << filename << endl);
+
+    std::ofstream os{filename.c_str()};
+    if (!os) {
+        v3fatal("Can't write " << filename);
+        return;
+    }
+    annotateCalc();
+
+        //     // VLCOVGEN_SHORT_AUTO_EDIT_BEGIN
+        // if (key == "column") return VL_CIK_COLUMN;
+        // if (key == "comment") return VL_CIK_COMMENT;
+        // if (key == "filename") return VL_CIK_FILENAME;
+        // if (key == "hier") return VL_CIK_HIER;
+        // if (key == "lineno") return VL_CIK_LINENO;
+        // if (key == "linescov") return VL_CIK_LINESCOV;
+        // if (key == "per_instance") return VL_CIK_PER_INSTANCE;
+        // if (key == "thresh") return VL_CIK_THRESH;
+        // if (key == "type") return VL_CIK_TYPE;
+        // if (key == "weight") return VL_CIK_WEIGHT;
+
+    // os << "File,Line,Column,Count,MinCount,MaxCount,Points\n";
+    os << "File,Line,Instance,Count,Branch";
+    os << ",Thresh,LinesCov,Col";
+    os << "\n";
+
+    for (auto& si : m_sources) {
+        VlcSource& source = si.second;
+        // os << "SF:" << source.name() << '\n';
+        VlcSource::LinenoMap& lines = source.lines();
+        for (auto& li : lines) {
+            VlcSourceCount& sc = li.second;
+            // os << "DA:" << sc.lineno() << "," << sc.maxCount() << "\n";
+            // int num_branches = sc.points().size();
+            // if (num_branches == 1) continue;
+            for (const auto& point : sc.points()) {
+                os << source.name() << ",";
+                os << point->lineno() << ",";
+                os << point->hier() << ",";
+                os << point->count() << ",";
+                os << point->comment() << ",";
+
+                os << point->thresh() << ",";
+                os << point->linescov() << ",";
+                os << point->column() << "\n";
+            }
+        }
+    }
+}
+
 //********************************************************************
 
 struct CmpComputrons final {

@@ -80,6 +80,7 @@ void VlcOptions::parseOptsList(int argc, char** argv) {
     });
     DECL_OPTION("-write", Set, &m_writeFile);
     DECL_OPTION("-write-info", Set, &m_writeInfoFile);
+    DECL_OPTION("-write-csv", Set, &m_writeInfoCsv);
     parser.finalize();
 
     // Parse parameters
@@ -147,9 +148,10 @@ int main(int argc, char** argv) {
         top.tests().dump(false);
     }
 
-    if (!top.opt.writeFile().empty() || !top.opt.writeInfoFile().empty()) {
+    if (!top.opt.writeFile().empty() || !top.opt.writeInfoFile().empty() || !top.opt.writeInfoCsv().empty()) {
         if (!top.opt.writeFile().empty()) top.writeCoverage(top.opt.writeFile());
         if (!top.opt.writeInfoFile().empty()) top.writeInfo(top.opt.writeInfoFile());
+        if (!top.opt.writeInfoCsv().empty()) top.writeCsv(top.opt.writeInfoCsv());
         V3Error::abortIfWarnings();
         if (top.opt.unlink()) {
             const VlStringSet& readFiles = top.opt.readFiles();

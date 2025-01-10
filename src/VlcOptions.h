@@ -43,6 +43,7 @@ class VlcOptions final {
     bool m_unlink = false;      // main switch: --unlink
     string m_writeFile;         // main switch: --write
     string m_writeInfoFile;     // main switch: --write-info
+    string m_writeInfoCsv;      // main switch: --write-info-csv
     // clang-format on
 
 private:
@@ -69,6 +70,7 @@ public:
     bool unlink() const { return m_unlink; }
     string writeFile() const { return m_writeFile; }
     string writeInfoFile() const { return m_writeInfoFile; }
+    string writeInfoCsv() const { return m_writeInfoCsv; }
 
     // METHODS (from main)
     static string version() VL_MT_DISABLED;

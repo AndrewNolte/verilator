@@ -58,6 +58,7 @@ public:
     void readCoverage(const string& filename, bool nonfatal = false);
     void writeCoverage(const string& filename);
     void writeInfo(const string& filename);
+    void writeCsv(const string& filename);
 
     void rank();
 };
