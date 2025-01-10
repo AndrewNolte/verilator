@@ -148,7 +148,8 @@ int main(int argc, char** argv) {
         top.tests().dump(false);
     }
 
-    if (!top.opt.writeFile().empty() || !top.opt.writeInfoFile().empty() || !top.opt.writeInfoCsv().empty()) {
+    if (!top.opt.writeFile().empty() || !top.opt.writeInfoFile().empty()
+        || !top.opt.writeInfoCsv().empty()) {
         if (!top.opt.writeFile().empty()) top.writeCoverage(top.opt.writeFile());
         if (!top.opt.writeInfoFile().empty()) top.writeInfo(top.opt.writeInfoFile());
         if (!top.opt.writeInfoCsv().empty()) top.writeCsv(top.opt.writeInfoCsv());
