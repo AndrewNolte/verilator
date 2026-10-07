@@ -370,7 +370,7 @@ private:
     int         m_ifDepth = 0;      // main switch: --if-depth
     int         m_inlineCFuncs = 20;   // main switch: --inline-cfuncs
     int         m_inlineCFuncsProduct = 200;   // main switch: --inline-cfuncs-product
-    int         m_inlineMult = 2000;   // main switch: --inline-mult
+    int         m_inlineMult = 20000;   // main switch: --inline-mult
     int         m_instrCountDpi = 200;   // main switch: --instr-count-dpi
     bool        m_jsonEditNums = true; // main switch: --no-json-edit-nums
     bool        m_jsonIds = true; // main switch: --no-json-ids
@@ -679,6 +679,7 @@ public:
     int ifDepth() const { return m_ifDepth; }
     int inlineCFuncs() const { return m_inlineCFuncs; }
     int inlineCFuncsProduct() const { return m_inlineCFuncsProduct; }
+    // Maximum estimated extra body size for automatic module inlining.
     int inlineMult() const { return m_inlineMult; }
     int instrCountDpi() const { return m_instrCountDpi; }
     int localizeMaxSize() const { return m_localizeMaxSize; }

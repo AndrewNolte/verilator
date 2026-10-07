@@ -2452,8 +2452,4 @@ void V3Options::optimize(int level) {
     m_fSubst = flag;
     m_fSubstConst = flag;
     m_fTable = flag;
-    // And set specific optimization levels
-    if (level >= 3) {
-        m_inlineMult = -1;  // Maximum inlining
-    }
 }

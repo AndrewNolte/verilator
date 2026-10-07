@@ -11,8 +11,8 @@ import vltest_bootstrap
 
 test.scenarios('simulator')
 
-# This tests combining CFuncs, but Dfg would inline the submodule, disabling
-test.compile(verilator_flags2=["--stats", "-fno-dfg"])
+# Preserve repeated submodule bodies to test combining CFuncs.
+test.compile(verilator_flags2=["--stats", "-fno-dfg", "--inline-mult", "1"])
 
 test.execute()
 
