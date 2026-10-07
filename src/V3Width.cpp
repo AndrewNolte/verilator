@@ -2518,7 +2518,8 @@ class WidthVisitor final : public VNVisitor {
                 // Captured interface types need their specialized instance's sizes.
                 // Class templates may still be used with their default parameters.
                 const AstNodeModule* const ownModp = v3Global.rootp()->containingModule(dtypep);
-                if (VN_IS(ownModp, Iface) && ownModp->parameterizedTemplate() && !ownModp->dead()) {
+                if (VN_IS(ownModp, Iface) && ownModp->parameterizedTemplate()
+                    && !ownModp->dead()) {
                     UINFO(9, "size deferred, type still on template " << ownModp->name());
                     // These queries always give an int, so set that now and let the
                     // value be worked out once the copy exists.
