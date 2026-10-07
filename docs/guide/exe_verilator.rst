@@ -1226,13 +1226,23 @@ Summary:
 
 .. option:: --inline-mult <value>
 
-   Tune the inlining of modules. The default value of 2000 specifies that
-   up to 2000 new operations may be added to the model by inlining. If more
-   than this number of operations would result, the module is not inlined.
-   Larger values, or a value < 1 which will inline everything, leads to
-   longer compile times, but potentially faster simulation speed. This
-   setting is ignored for very small modules; they will always be inlined,
-   if allowed.
+   Tune the estimated code duplication allowed when inlining modules. The
+   default is 20000. For each module, estimate how much additional code
+   inlining would duplicate across its static instantiation sites, including
+   any submodules already selected for inlining. Inline when this estimate
+   is at most the specified limit. The limit applies independently to each
+   module, rather than to the total growth of the model.
+
+   Larger positive values allow more inlining; smaller positive values
+   allow less inlining. More inlining may increase C++ compilation time and
+   memory use, but potentially improve simulation speed. Values below 1
+   enable unlimited inlining. Modules with a single static instantiation
+   site and very small module bodies are always inlined, if allowed.
+   Explicit inlining requests and restrictions still apply.
+
+   :vlopt:`-O3` uses the same bounded default and preserves an explicitly
+   specified limit. To enable unlimited module inlining, specify
+   ``--inline-mult 0``.
 
 .. option:: --instr-count-dpi <value>
 
@@ -1482,11 +1492,10 @@ Summary:
 
 .. option:: -O3
 
-   Enables slow optimizations for the code Verilator itself generates (as
-   opposed to :vlopt:`-CFLAGS -O3 <-CFLAGS>` which affects the C compiler's
-   optimization. :vlopt:`-O3` may improve simulation performance at the
-   cost of compile time. This currently sets :vlopt:`--inline-mult -1
-   <--inline-mult>`.
+   Enables model optimizations while keeping module inlining bounded by
+   :vlopt:`--inline-mult`. To enable unlimited module inlining, also specify
+   ``--inline-mult 0``. This controls the code Verilator generates;
+   :vlopt:`-CFLAGS -O3 <-CFLAGS>` controls the C++ compiler's optimization.
 
 .. option:: -O<optimization-letter>
 
