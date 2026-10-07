@@ -15,6 +15,10 @@
 //*************************************************************************
 // V3Inline's Transformations:
 //
+// Decide from children to parents using the extra duplicated body size, including
+// previously selected child inlining. Single static instances and small raw module
+// bodies are always inlined when allowed.
+//
 // Each module:
 //      Look for CELL... PRAGMA INLINE_MODULE
 //          Replicate the cell's module
@@ -39,7 +43,7 @@
 VL_DEFINE_DEBUG_FUNCTIONS;
 
 // CONFIG
-static const int INLINE_MODS_SMALLER = 100;  // If a mod is < this # nodes, can always inline it
+static constexpr int INLINE_MODS_SMALLER = 100;  // Always inline smaller raw module bodies
 
 //######################################################################
 // Bipartite module instantiation graph containing module and cell vertices
@@ -82,9 +86,8 @@ class InlineModModuleVertex final : public InlineModEitherVertex {
     const char* m_noInlineHardWyp = nullptr;  // First reason the module can never be inlined
     const char* m_noInlineSoftWyp = nullptr;  // First reason not to inline unless forced
     const char* m_shouldInlineWhyp = nullptr;  // First reason why this module should be inlined
-    size_t m_size = 0;  // The size (statement count) of the module
-    size_t mutable m_flattenedSize = 0;  // The size of the module if flattened
-    bool mutable m_flattenedSizeValid = false;  // Whether the flattened size is valid
+    size_t m_size = 0;  // The size (AST node count) of the raw module body
+    size_t m_inlinedSize = 0;  // Body size including children selected for inlining
     size_t mutable m_instanceCount = 0;  // The number of total instances of this module
     bool mutable m_instanceCountValid = false;  // Whether the instance count is valid
 
@@ -97,8 +100,9 @@ public:
     // ACCESSORS
     AstNodeModule* modp() const { return m_modp; }
     size_t size() const { return m_size; }
-    void size(size_t value) { m_size = value; }
     void sizeInc(size_t value = 1) { m_size += value; }
+    size_t inlinedSize() const { return m_inlinedSize; }
+    void inlinedSize(size_t value) { m_inlinedSize = value; }
     bool noInlineHard() const { return m_noInlineHardWyp; }
     void setNoInlineHard(const char* whyp) {
         if (!m_noInlineHardWyp) m_noInlineHardWyp = whyp;
@@ -110,23 +114,6 @@ public:
     bool shouldInline() const { return m_shouldInlineWhyp; }
     void setShouldInline(const char* whyp) {
         if (!m_shouldInlineWhyp) m_shouldInlineWhyp = whyp;
-    }
-    // Mark every instance below this module for inlining
-    void setFlatten();
-
-    // Total size of module, with all hierarchy below flattened
-    size_t flattenedSize() const {
-        if (!m_flattenedSizeValid) {
-            m_flattenedSizeValid = true;
-            m_flattenedSize = m_size;
-            for (const V3GraphEdge& e1 : outEdges()) {
-                for (const V3GraphEdge& e2 : e1.top()->outEdges()) {
-                    InlineModModuleVertex* const mVtxp = e2.top()->as<InlineModModuleVertex>();
-                    m_flattenedSize += mVtxp->flattenedSize();
-                }
-            }
-        }
-        return m_flattenedSize;
     }
     // Total number of instances of this module in the whole hierarchy of the design
     // Note this is the same as the number of AstScopes the module has.
@@ -162,7 +149,7 @@ public:
         str += "\n" + m_modp->name() + " @ " + fileline()->ascii();
         str += "\ninstanceCount: " + std::to_string(instanceCount());
         str += "\nsize: " + std::to_string(m_size);
-        str += "\nflattenedSize: " + std::to_string(flattenedSize());
+        str += "\ninlinedSize: " + std::to_string(m_inlinedSize);
         if (m_shouldInlineWhyp) str += "\nShouldInline: "s + m_shouldInlineWhyp;
         if (m_noInlineHardWyp) str += "\nNoInlineHard: "s + m_noInlineHardWyp;
         if (m_noInlineSoftWyp) str += "\nNoInlineSoft: "s + m_noInlineSoftWyp;
@@ -175,7 +162,6 @@ class InlineModCellVertex final : public InlineModEitherVertex {
     VL_RTTI_IMPL(InlineModCellVertex, InlineModEitherVertex)
     AstCell* const m_cellp;  // The cell (instance)
     const char* m_doInlineWyp = nullptr;  // First reason this instance should be inlined
-    bool m_flatten = false;  // Whether this cell and below already flattened (avoid O(n^2))
 
 public:
     InlineModCellVertex(InlineModGraph& graph, AstCell* cellp)
@@ -189,8 +175,6 @@ public:
     void setDoInline(const char* whyp) {
         if (!m_doInlineWyp) m_doInlineWyp = whyp;
     }
-    bool flatten() const { return m_flatten; }
-    void setFlatten() { m_flatten = true; }
 
     // The module vertx this cell is instantiating
     InlineModModuleVertex& instanceOf() const {
@@ -232,17 +216,6 @@ void InlineModGraph::addEdge(InlineModModuleVertex& parent, InlineModCellVertex&
 void InlineModGraph::addEdge(InlineModCellVertex& cell, InlineModModuleVertex& submodule) {
     UASSERT_OBJ(cell.outEmpty(), &cell, "Cell should have at most one outgoing edge");
     new V3GraphEdge{this, &cell, &submodule, 1, /* cutable: */ false};
-}
-
-void InlineModModuleVertex::setFlatten() {
-    for (V3GraphEdge& edge : outEdges()) {
-        InlineModCellVertex& cVtx = *edge.top()->as<InlineModCellVertex>();
-        if (cVtx.flatten()) continue;
-        cVtx.setFlatten();
-        InlineModModuleVertex& iVtx = cVtx.instanceOf();
-        if (!iVtx.noInlineHard() && !iVtx.noInlineSoft()) cVtx.setDoInline("flatten parent");
-        iVtx.setFlatten();
-    }
 }
 
 //######################################################################
@@ -697,55 +670,33 @@ void V3Inline::inlineAll(AstNetlist* nodep) {
     std::unique_ptr<InlineModGraph> graphp = InlineModGraphBuilder::apply(nodep);
     if (dumpGraphLevel() >= 6) graphp->dumpDotFilePrefixed("inlinemod-graph");
 
-    // Decide which instances to inline
-    const size_t designSize
-        = graphp->vertices().frontp()->as<InlineModModuleVertex>()->flattenedSize();
+    // Process children first so the cost includes bodies already selected for inlining.
+    std::vector<InlineModModuleVertex*> mVtxps;
     for (V3GraphVertex& vtx : graphp->vertices()) {
         if (InlineModModuleVertex* const mVtxp = vtx.cast<InlineModModuleVertex>()) {
-            // If this module is less than 10% of the design, flatten this module
-            if (mVtxp->flattenedSize() * 10 < designSize) mVtxp->setFlatten();
-            // Don't inline if can't inline
-            if (mVtxp->noInlineHard()) continue;
-            // Don't inline if soft off
-            if (mVtxp->noInlineSoft()) continue;
-            // If all instances of this module combined are less than 20% of the design, inline all
-            size_t totalSize = mVtxp->flattenedSize() * mVtxp->instanceCount();
-            if (totalSize * 5 < designSize) {
-                for (V3GraphEdge& edge : mVtxp->inEdges()) {
-                    InlineModCellVertex* const cVtxp = edge.fromp()->as<InlineModCellVertex>();
-                    cVtxp->setDoInline("< 20% of design");
-                }
-            }
-            // No more decisions based on module vertex
-            continue;
+            mVtxps.push_back(mVtxp);
         }
-
-        // The instantiation
-        InlineModCellVertex& cVtx = *vtx.as<InlineModCellVertex>();
-        // The module instantiated by this cell
-        InlineModModuleVertex& mVtx = cVtx.instanceOf();
-
-        // Don't inline if can't inline, duh!
-        if (mVtx.noInlineHard()) continue;
-
-        // If it should be inlined, inlined it
-        if (mVtx.shouldInline()) cVtx.setDoInline("should inline");
-        // If --flatten, inline it
-        if (v3Global.opt.flatten()) cVtx.setDoInline("--flatten");
-
-        // Don't inline for other reasons if soft off
-        if (mVtx.noInlineSoft()) continue;
-
-        // If instatiated in exactly one static site, inline it
-        if (mVtx.inSize1()) cVtx.setDoInline("Single static instance");
-        // If small, inline it
-        if (mVtx.size() < INLINE_MODS_SMALLER) cVtx.setDoInline("Small");
-        // If inlineMult is 0, inline it
-        if (v3Global.opt.inlineMult() < 1) cVtx.setDoInline("inlineMult < 1");
-        // If it would yield less than the given number of ops, inline it
-        const size_t inlinedSize = mVtx.inEdges().size() * mVtx.size();
-        const size_t limit = v3Global.opt.inlineMult();
-        if (inlinedSize < limit) cVtx.setDoInline("inlinedSize < inlineMult");
+    }
+    const int limit = v3Global.opt.inlineMult();
+    for (InlineModModuleVertex* const mVtxp : vlstd::reverse_view(mVtxps)) {
+        size_t bodySize = mVtxp->size();
+        for (const V3GraphEdge& edge : mVtxp->outEdges()) {
+            const InlineModCellVertex& cell = *edge.top()->as<InlineModCellVertex>();
+            if (cell.doInline()) bodySize += cell.instanceOf().inlinedSize();
+        }
+        mVtxp->inlinedSize(bodySize);
+        if (mVtxp->noInlineHard()) continue;
+        const size_t sites = mVtxp->inEdges().size();
+        // Small raw bodies include wrappers whose children may be much larger.
+        // Divide the limit to avoid overflowing the extra-copy cost product.
+        const bool cheap = sites <= 1 || mVtxp->size() < INLINE_MODS_SMALLER || limit < 1
+                           || bodySize <= static_cast<size_t>(limit) / (sites - 1);
+        for (V3GraphEdge& edge : mVtxp->inEdges()) {
+            InlineModCellVertex& cell = *edge.fromp()->as<InlineModCellVertex>();
+            if (mVtxp->shouldInline()) cell.setDoInline("should inline");
+            if (v3Global.opt.flatten()) cell.setDoInline("--flatten");
+            if (!mVtxp->noInlineSoft() && cheap) cell.setDoInline("bounded duplicate body");
+        }
     }
     if (dumpGraphLevel() >= 6) graphp->dumpDotFilePrefixed("inlinemod-decision");
 
