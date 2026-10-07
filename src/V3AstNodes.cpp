@@ -2422,8 +2422,9 @@ AstNodeDType::CTypeRecursed AstNodeDType::cTypeRecurse(bool compound, bool packe
         info.m_type += ">";
     } else if (const auto* const adtypep = VN_CAST(dtypep, CoverCrossDType)) {
         UASSERT_OBJ(!packed, this, "Unsupported type for packed struct or union");
-        info.m_type = adtypep->isDynamic() ? "::VlCoverCrossDyn*"
-                                           : "::VlCoverCrossT<" + adtypep->cppTemplateArgs() + ">*";
+        info.m_type = adtypep->isDynamic()
+                          ? "::VlCoverCrossDyn*"
+                          : "::VlCoverCrossT<" + adtypep->cppTemplateArgs() + ">*";
     } else if (const auto* const adtypep = VN_CAST(dtypep, CoverpointDType)) {
         UASSERT_OBJ(!packed, this, "Unsupported type for packed struct or union");
         info.m_type = "::VlCoverpointT<" + cvtToStr(adtypep->hitBound()) + ">*";

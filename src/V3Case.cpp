@@ -957,9 +957,8 @@ class CaseVisitor final : public VNVisitor {
                 const V3Number& matchMask = match.first;
                 const V3Number& matchBits = match.second;
                 VL_DO_DANGLING2(itemExprp->deleteTree(), itemExprp, itemConstp);
-                return AstEq::newTyped(
-                    flp, new AstConst{flp, matchBits},
-                    new AstAnd{flp, caseExprp, new AstConst{flp, matchMask}});
+                return AstEq::newTyped(flp, new AstConst{flp, matchBits},
+                                       new AstAnd{flp, caseExprp, new AstConst{flp, matchMask}});
             }
         }
 
